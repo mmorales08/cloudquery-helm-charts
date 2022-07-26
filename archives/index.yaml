@@ -11,9 +11,9 @@ entries:
           email: yp@cloudquery.io
     apiVersion: v2
     appVersion: "0.32"
-    created: "2022-07-26T12:06:52.395906-05:00"
+    created: "2022-07-26T14:13:13.519696-05:00"
     description: The open-source cloud asset inventory powered by SQL.
-    digest: c8c001df0f3067569871c00c173a15af95898242bff03eabcaca1a13631f4e74
+    digest: c2610be17840bccfaf3e3c2c024adb66d8b7447b746e2b53e710224a88d32490
     home: https://cloudquery.io
     icon: https://avatars.githubusercontent.com/u/74616112
     keywords:
@@ -24,9 +24,9 @@ entries:
       name: yevgenypats
     name: cloudquery
     sources:
-    - https://github.com/mmorales08/cloudquery-helm-charts/tree/main/charts/cloudquery
+    - https://github.com/mmorales08.github.io/cloudquery-helm-charts/tree/main/charts/cloudquery
     type: application
     urls:
     - https://mmorales08.github.io/cloudquery-helm-charts/archives/cloudquery-0.2.13.tgz
     version: 0.2.13
-generated: "2022-07-26T12:06:52.394995-05:00"
+generated: "2022-07-26T14:13:13.518809-05:00"
