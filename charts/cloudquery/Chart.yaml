@@ -8,7 +8,7 @@ icon: https://avatars.githubusercontent.com/u/74616112
 keywords:
   - cloudquery
 sources:
-  - https://github.com/cloudquery/helm-charts/tree/main/charts/cloudquery
+  - https://github.com/mmorales08/cloudquery-helm-charts/tree/main/charts/cloudquery
 
 maintainers:
   - name: yevgenypats
