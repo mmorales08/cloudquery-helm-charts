@@ -24,7 +24,7 @@ entries:
       name: yevgenypats
     name: cloudquery
     sources:
-    - https://github.com/cloudquery/helm-charts/tree/main/charts/cloudquery
+    - https://github.com/mmorales08/cloudquery-helm-charts/tree/main/charts/cloudquery
     type: application
     urls:
     - https://mmorales08.github.io/cloudquery-helm-charts/archives/cloudquery-0.2.13.tgz
