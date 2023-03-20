@@ -9,15 +9,18 @@ image:
   tag:
   pullPolicy: IfNotPresent
 
+# -- Pod security context
 securityContext:
-  enabled: true
   fsGroup: 1001
 
+# -- Container security context
+# @default -- See [values.yaml](./values.yaml)
 containerSecurityContext:
-  enabled: true
-  runAsUser: 1001
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - all
 
-# -- Pod Service Account
 # ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
 serviceAccount:
   # -- Enable service account (Note: Service Account will only be automatically created if `serviceAccount.name` is not set)
@@ -30,75 +33,114 @@ serviceAccount:
   # to associate an AWS IAM role with service-account you need to add the following annotations. For more info checkout: https://docs.aws.amazon.com/eks/latest/userguide/specify-service-account-role.html
   # eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/ROLE
   annotations: {}
+  # -- Additional custom label for the ServiceAccount
+  labels: {}
+
+admin:
+  # -- Enable admin container
+  # useful for debugging into cloudquery
+  enabled: true
 
 # -- Sensible environment variables that will be rendered as new secret object
 # This can be useful for auth tokens, etc
 # Make sure not to commit sensitive values to git!! Better use AWS Secret manager (or any other)
 envRenderSecret: {}
-#  CQ_VAR_DSN: "postgres://postgres:pass@cloudquery-postgresql:5432/postgres?sslmode=disable"
+#  CQ_DSN: "postgresql://postgres:pass@localhost:5432/postgres"
 
-  # For AWS see https://docs.cloudquery.io/docs/getting-started/getting-started-with-aws
-  # AWS_ACCESS_KEY_ID: ""
-  # AWS_SECRET_ACCESS_KEY: ""
-  # AWS_SESSION_TOKEN: ""
+# For AWS see https://github.com/cloudquery/cloudquery/blob/main/plugins/source/aws/README.md
+# AWS_ACCESS_KEY_ID: ""
+# AWS_SECRET_ACCESS_KEY: ""
+# AWS_SESSION_TOKEN: ""
 
-  # For GCP see https://docs.cloudquery.io/docs/getting-started/getting-started-with-gcp
-  # GOOGLE_APPLICATION_CREDENTIALS: ""
+# For GCP see https://github.com/cloudquery/cloudquery/blob/main/plugins/source/gcp/README.md
+# GOOGLE_APPLICATION_CREDENTIALS: ""
 
-  # For Azure see https://docs.cloudquery.io/docs/getting-started/getting-started-with-azure
-  # AZURE_TENANT_ID: ""
-  # AZURE_CLIENT_ID: ""
-  # AZURE_CLIENT_SECRET: ""
+# For Azure see https://github.com/cloudquery/cloudquery/blob/main/plugins/source/azure/README.md
+# AZURE_TENANT_ID: ""
+# AZURE_CLIENT_ID: ""
+# AZURE_CLIENT_SECRET: ""
 
-  # For any other provider checkout https://hub.cloudquery.io/providers
+# For any other plugins visit https://cloudquery.io/docs/plugins/sources
+
+# -- Pass the configuration directives and envRenderSecret through Helm's templating engine.
+## ref: https://helm.sh/docs/developing_charts/#using-the-tpl-function
+tplConfig: false
+
+# -- Reference to an external secret that contains sensible environment variables
+# This option is useful to avoid store sensitive values in Git. You need to create the secret manually and reference it.
+# If secretRef is used, the envRenderSecret parameter will be omitted (in case that it has content).
+secretRef:
 
 # -- Schedule fetch time Every 6 hours.
 # More information at: https://crontab.guru/#0_0_*_*_*
 schedule: "0 */6 * * *"
-
-# Enable cloudwatch logs when deployed on EKS
-cloudwatch:
-  enabled: false
-  cluster_name: cloudquery-complete-example
-  region: us-east-1
-  # Service account ARN with CloudWatchAgentServerPolicy role to be able to create and write to the logs
-  role_arn: "arn:aws:iam::xxxxxxx:role/cloudquery-complete-example-eksa-irsa-cloudwatch"
+# -- (int) Number of successful cronjobs to retain.
+cronJobLimit: 3
+# -- (int) Number of failed cronjobs to retain.
+cronJobFailedJobsLimit: 1
 
 # -- CloudQuery cloudquery.yml content
 # @default -- The chart will use a default CloudQuery aws config
 config: |
-  cloudquery:
-    providers:
-    - name: aws
-      version: latest
-    connection:
-      dsn: "${DSN}"
-  providers:
-  - name: aws
-    configuration:
-      # Optional, Repeated. Add an accounts block for every account you want to assume-role into and fetch data from.
-      # accounts:
-      #   - id: <UNIQUE ACCOUNT IDENTIFIER>
-      # Optional. Role ARN we want to assume when accessing this account
-      #     role_arn: < YOUR_ROLE_ARN >
-      # Optional. Named profile in config or credential file from where CQ should grab credentials
-      #     local_profile: < PROFILE_NAME >
-      # Optional. by default assumes all regions
-      # regions:
-      #   - us-east-1
-      #   - us-west-2
-      # Optional. Enable AWS SDK debug logging.
-      #   aws_debug: false
-      # The maximum number of times that a request will be retried for failures. Defaults to 10 retry attempts.
-      # max_retries: 10
-      # The maximum back off delay between attempts. The backoff delays exponentially with a jitter based on the number of attempts. Defaults to 30 seconds.
-      # max_backoff: 30
-    resources:
-    # list of resources to fetch
-    - "*"
+  kind: source
+  spec:
+    name: aws
+    path: cloudquery/aws
+    version: "v15.4.0" # latest version of aws plugin
+    tables: ["*"]
+    destinations: ["postgresql"]
+  ---
+  kind: destination
+  spec:
+    name: postgresql
+    path: cloudquery/postgresql
+    version: "v3.0.1" # latest version of postgresql plugin
+    spec:
+      connection_string: ${CQ_DSN}
+
+# Optional. Additional volumes to mount in the pod.
+volumes:
+
+# Optional. Additional volumes to mount in the pod.
+volumeMounts:
 
 
-# resources:
-#   requests:
-#     memory: 1024Mi
-#     cpu: 1000m
+resources:
+  # -- Optional. Resource requests/ limit for admin pod.
+  admin:
+    requests:
+      memory: 1024Mi
+      cpu: 1000m
+
+  # -- Optional. Resource requests/ limit for cronJob.
+  cronJob:
+    requests:
+      memory: 1024Mi
+      cpu: 1000m
+
+# -- Optional. Adds the nodeSelector to the admin pod and cronjob.
+nodeSelector: {}
+
+# -- Promtail sub-chart configuration
+# @default -- See [values.yaml](./values.yaml)
+promtail:
+  enabled: false
+  config:
+    clients:
+      - url: http://loki-gateway/loki/api/v1/push
+
+# Optional. Additional labels to be applied to all resources.
+labels: {}
+
+# Optional. Admin Deployment annotations.
+deploymentAnnotations: {}
+
+# Optional. CronJob Pod annotations.
+cronJobPodAnnotations: {}
+
+# Optional. CronJob Pod labels.
+cronJobPodLabels: {}
+
+# Optional. Additional CLI arguments to pass to the scheduled sync job (e.g. setting log format)
+# More information at: https://www.cloudquery.io/docs/reference/cli/cloudquery
+cronJobAdditionalArgs: []
